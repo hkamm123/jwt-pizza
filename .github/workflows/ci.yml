@@ -12,7 +12,6 @@ jobs:
     steps:
       - name: create static deployment file
         run: |
-          killall firefox
           mkdir dist
           echo "<h1>Hello GitHub Pages</h1>" >> dist/index.html
 
