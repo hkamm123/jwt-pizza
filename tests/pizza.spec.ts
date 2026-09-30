@@ -21,21 +21,40 @@ async function basicInit(page: Page) {
     }
   };
 
-  // Authorize login for the given user
+  // Login (PUT), register (POST), or logout (DELETE)
   await page.route('*/**/api/auth', async (route) => {
+    const method = route.request().method();
+
+    if (method === 'DELETE') {
+      loggedInUser = undefined;
+      await route.fulfill({ json: { message: 'logout successful' } });
+      return;
+    }
+
+    if (method === 'POST') {
+      const registerReq = route.request().postDataJSON();
+      const newUser: User = {
+        id: String(Object.keys(validUsers).length + 10),
+        name: registerReq.name,
+        email: registerReq.email,
+        password: registerReq.password,
+        roles: [{ role: Role.Diner }],
+      };
+      validUsers[newUser.email!] = newUser;
+      loggedInUser = newUser;
+      await route.fulfill({ json: { user: newUser, token: 'abcdef' } });
+      return;
+    }
+
+    expect(method).toBe('PUT');
     const loginReq = route.request().postDataJSON();
     const user = validUsers[loginReq.email];
     if (!user || user.password !== loginReq.password) {
       await route.fulfill({ status: 401, json: { error: 'Unauthorized' } });
       return;
     }
-    loggedInUser = validUsers[loginReq.email];
-    const loginRes = {
-      user: loggedInUser,
-      token: 'abcdef',
-    };
-    expect(route.request().method()).toBe('PUT');
-    await route.fulfill({ json: loginRes });
+    loggedInUser = user;
+    await route.fulfill({ json: { user: loggedInUser, token: 'abcdef' } });
   });
 
   // Return the currently logged in user
@@ -211,4 +230,18 @@ test('diner dashboard', async ({ page }) => {
   await expect(page.getByRole('main')).toContainText('d@jwt.com');
   await expect(page.getByText('Here is your history of all the good times.')).toBeVisible();
   await expect(page.locator('tbody')).toContainText('23');
+});
+
+test('register', async ({ page }) => {
+  await basicInit(page);
+
+  await page.getByRole('link', { name: 'Register' }).click();
+  await expect(page.getByText('Welcome to the party')).toBeVisible();
+
+  await page.getByPlaceholder('Full name').fill('Pizza Pat');
+  await page.getByPlaceholder('Email address').fill('pat@jwt.com');
+  await page.getByPlaceholder('Password').fill('secret');
+  await page.getByRole('button', { name: 'Register' }).click();
+
+  await expect(page.getByRole('link', { name: 'PP' })).toBeVisible();
 });
