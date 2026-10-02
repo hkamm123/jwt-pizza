@@ -109,9 +109,23 @@ async function basicInit(page: Page) {
     { id: '4', name: 'topSpot', stores: [] },
   ];
 
-  // List all franchises
+  // List all franchises (GET) or create a franchise (POST)
   await page.route(/\/api\/franchise(\?.*)?$/, async (route) => {
-    expect(route.request().method()).toBe('GET');
+    const method = route.request().method();
+
+    if (method === 'POST') {
+      const franchiseReq = route.request().postDataJSON();
+      const admins = franchiseReq.admins.map((a: User) => {
+        const user = validUsers[a.email!];
+        return { id: user?.id, name: user?.name, email: a.email };
+      });
+      const franchise: Franchise = { ...franchiseReq, id: '98', admins, stores: [] };
+      franchises.push(franchise);
+      await route.fulfill({ json: franchise });
+      return;
+    }
+
+    expect(method).toBe('GET');
     await route.fulfill({ json: { franchises, more: false } });
   });
 
@@ -171,6 +185,18 @@ async function basicInit(page: Page) {
     };
     expect(route.request().method()).toBe('POST');
     await route.fulfill({ json: orderRes });
+  });
+
+  // Verify an order's JWT with the pizza factory
+  await page.route('*/**/api/order/verify', async (route) => {
+    expect(route.request().method()).toBe('POST');
+    expect(route.request().postDataJSON()).toMatchObject({ jwt: 'eyJpYXQ' });
+    await route.fulfill({
+      json: {
+        message: 'valid',
+        payload: { vendor: { id: 'hkamm123', name: 'Hyrum Kammerman' }, diner: { id: 3, name: 'Kai Chen' } },
+      },
+    });
   });
 
   await page.goto('/');
@@ -310,4 +336,65 @@ test('franchisee dashboard create and close store', async ({ page }) => {
   await expect(page.getByRole('main')).toContainText('Lehi');
   await page.getByRole('button', { name: 'Close' }).click();
   await expect(page.locator('tbody')).not.toContainText('Lehi');
+});
+
+test('admin create franchise', async ({ page }) => {
+  await basicInit(page);
+
+  await page.getByRole('link', { name: 'Login' }).click();
+  await page.getByRole('textbox', { name: 'Email address' }).fill('a@jwt.com');
+  await page.getByRole('textbox', { name: 'Password' }).fill('a');
+  await page.getByRole('button', { name: 'Login' }).click();
+  await expect(page.getByRole('link', { name: 'AA' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Admin' }).click();
+  await expect(page.getByText("Mama Ricci's kitchen")).toBeVisible();
+
+  await page.getByRole('button', { name: 'Add Franchise' }).click();
+  await expect(page.getByText('Want to create franchise?')).toBeVisible();
+  await page.getByPlaceholder('franchise name').fill('PizzaPocket');
+  await page.getByPlaceholder('franchisee admin email').fill('f@jwt.com');
+  await page.getByRole('button', { name: 'Create' }).click();
+
+  await expect(page).toHaveURL(/\/admin-dashboard$/);
+  const newRow = page.getByRole('row', { name: /PizzaPocket/ });
+  await expect(newRow).toBeVisible();
+  await expect(newRow).toContainText('Frank Franchisee');
+});
+
+test('delivery page after ordering', async ({ page }) => {
+  await basicInit(page);
+
+  await page.getByRole('link', { name: 'Login' }).click();
+  await page.getByRole('textbox', { name: 'Email address' }).fill('d@jwt.com');
+  await page.getByRole('textbox', { name: 'Password' }).fill('a');
+  await page.getByRole('button', { name: 'Login' }).click();
+  await expect(page.getByRole('link', { name: 'KC' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Order' }).click();
+  await page.getByRole('combobox').selectOption('4');
+  await page.getByRole('link', { name: 'Image Description Veggie A' }).click();
+  await page.getByRole('link', { name: 'Image Description Pepperoni' }).click();
+  await page.getByRole('button', { name: 'Checkout' }).click();
+  await page.getByRole('button', { name: 'Pay now' }).click();
+
+  await expect(page).toHaveURL(/\/delivery$/);
+  await expect(page.getByText('Here is your JWT Pizza!')).toBeVisible();
+  const main = page.getByRole('main');
+  await expect(main).toContainText('order ID: 23');
+  await expect(main).toContainText('pie count: 2');
+  await expect(main).toContainText('total: 0.008 ₿');
+  await expect(main).toContainText('eyJpYXQ');
+
+  await page.getByRole('button', { name: 'Verify' }).click();
+  const modal = page.locator('#hs-jwt-modal');
+  await expect(modal).toBeVisible();
+  await expect(modal.getByRole('heading')).toContainText('JWT Pizza - valid');
+  await expect(modal).toContainText('Kai Chen');
+  await expect(modal).toHaveClass(/\bopened\b/);
+  await modal.getByRole('button', { name: 'Close' }).click();
+  await expect(modal).toBeHidden();
+
+  await page.getByRole('button', { name: 'Order more' }).click();
+  await expect(page).toHaveURL(/\/menu$/);
 });
