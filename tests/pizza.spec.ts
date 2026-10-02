@@ -202,12 +202,24 @@ async function basicInit(page: Page) {
   await page.goto('/');
 }
 
+// Fill in and submit the login form that is already on screen, then wait
+// for the header to show the user as logged in.
+async function submitLogin(page: Page, email: string, password = 'a') {
+  await page.getByRole('textbox', { name: 'Email address' }).fill(email);
+  await page.getByRole('textbox', { name: 'Password' }).fill(password);
+  await page.getByRole('button', { name: 'Login' }).click();
+  await expect(page.getByRole('link', { name: 'Logout' })).toBeVisible();
+}
+
+// Log in starting from the header's Login link.
+async function login(page: Page, email: string, password = 'a') {
+  await page.getByRole('link', { name: 'Login' }).click();
+  await submitLogin(page, email, password);
+}
+
 test('login', async ({ page }) => {
   await basicInit(page);
-  await page.getByRole('link', { name: 'Login' }).click();
-  await page.getByRole('textbox', { name: 'Email address' }).fill('d@jwt.com');
-  await page.getByRole('textbox', { name: 'Password' }).fill('a');
-  await page.getByRole('button', { name: 'Login' }).click();
+  await login(page, 'd@jwt.com');
 
   await expect(page.getByRole('link', { name: 'KC' })).toBeVisible();
 });
@@ -227,11 +239,7 @@ test('purchase with login', async ({ page }) => {
   await page.getByRole('button', { name: 'Checkout' }).click();
 
   // Login
-  await page.getByPlaceholder('Email address').click();
-  await page.getByPlaceholder('Email address').fill('d@jwt.com');
-  await page.getByPlaceholder('Email address').press('Tab');
-  await page.getByPlaceholder('Password').fill('a');
-  await page.getByRole('button', { name: 'Login' }).click();
+  await submitLogin(page, 'd@jwt.com');
 
   // Pay
   await expect(page.getByRole('main')).toContainText(
@@ -265,11 +273,7 @@ test('view static pages', async ({ page }) => {
 test('login as admin', async ({ page }) => {
   await basicInit(page);
 
-  await page.getByRole('link', { name: 'Login' }).click();
-  await page.getByRole('textbox', { name: 'Email address' }).fill('a@jwt.com');
-  await page.getByRole('textbox', { name: 'Password' }).click();
-  await page.getByRole('textbox', { name: 'Password' }).fill('a');
-  await page.getByRole('button', { name: 'Login' }).click();
+  await login(page, 'a@jwt.com');
 
   await expect(page.getByRole('link', { name: 'AA' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Admin' })).toBeVisible();
@@ -281,10 +285,7 @@ test('login as admin', async ({ page }) => {
 test('diner dashboard', async ({ page }) => {
   await basicInit(page);
 
-  await page.getByRole('link', { name: 'Login' }).click();
-  await page.getByRole('textbox', { name: 'Email address' }).fill('d@jwt.com');
-  await page.getByRole('textbox', { name: 'Password' }).fill('a');
-  await page.getByRole('button', { name: 'Login' }).click();
+  await login(page, 'd@jwt.com');
 
   await page.getByRole('link', { name: 'KC' }).click();
 
@@ -313,11 +314,7 @@ test('register', async ({ page }) => {
 test('franchisee dashboard create and close store', async ({ page }) => {
   await basicInit(page);
 
-  await page.getByRole('link', { name: 'Login' }).click();
-  await page.getByRole('textbox', { name: 'Email address' }).fill('f@jwt.com');
-  await page.getByRole('textbox', { name: 'Password' }).fill('a');
-  await page.getByRole('button', { name: 'Login' }).click();
-  await expect(page.getByRole('link', { name: 'FF' })).toBeVisible();
+  await login(page, 'f@jwt.com');
 
   await page.getByLabel('Global').getByRole('link', { name: 'Franchise' }).click();
   await expect(page.getByRole('heading', { name: 'LotaPizza' })).toBeVisible();
@@ -341,11 +338,7 @@ test('franchisee dashboard create and close store', async ({ page }) => {
 test('admin create franchise', async ({ page }) => {
   await basicInit(page);
 
-  await page.getByRole('link', { name: 'Login' }).click();
-  await page.getByRole('textbox', { name: 'Email address' }).fill('a@jwt.com');
-  await page.getByRole('textbox', { name: 'Password' }).fill('a');
-  await page.getByRole('button', { name: 'Login' }).click();
-  await expect(page.getByRole('link', { name: 'AA' })).toBeVisible();
+  await login(page, 'a@jwt.com');
 
   await page.getByRole('link', { name: 'Admin' }).click();
   await expect(page.getByText("Mama Ricci's kitchen")).toBeVisible();
@@ -365,11 +358,7 @@ test('admin create franchise', async ({ page }) => {
 test('delivery page after ordering', async ({ page }) => {
   await basicInit(page);
 
-  await page.getByRole('link', { name: 'Login' }).click();
-  await page.getByRole('textbox', { name: 'Email address' }).fill('d@jwt.com');
-  await page.getByRole('textbox', { name: 'Password' }).fill('a');
-  await page.getByRole('button', { name: 'Login' }).click();
-  await expect(page.getByRole('link', { name: 'KC' })).toBeVisible();
+  await login(page, 'd@jwt.com');
 
   await page.getByRole('link', { name: 'Order' }).click();
   await page.getByRole('combobox').selectOption('4');
@@ -391,7 +380,7 @@ test('delivery page after ordering', async ({ page }) => {
   await expect(modal).toBeVisible();
   await expect(modal.getByRole('heading')).toContainText('JWT Pizza - valid');
   await expect(modal).toContainText('Kai Chen');
-  await expect(modal).toHaveClass(/\bopened\b/);
+  await expect(modal.locator(':scope > div')).toHaveCSS('opacity', '1');
   await modal.getByRole('button', { name: 'Close' }).click();
   await expect(modal).toBeHidden();
 
