@@ -180,23 +180,31 @@ export default function DinerDashboard(props: Props) {
             </div>
             <div className="p-4 overflow-y-scroll max-h-52">
               <div className="my-4 text-lg text-start grid grid-cols-5 gap-2 items-center">
-                <div className="font-semibold">name:</div>
+                <label htmlFor="edit-name" className="font-semibold">
+                  name:
+                </label>
                 <input
+                  id="edit-name"
                   type="text"
                   className="col-span-4 border border-gray-300 rounded-md p-1"
                   defaultValue={user.name}
                   ref={nameRef}
                 />
-                <div className="font-semibold">email:</div>
+                <label htmlFor="edit-email" className="font-semibold">
+                  email:
+                </label>
                 <input
+                  id="edit-email"
                   type="email"
                   className="col-span-4 border border-gray-300 rounded-md p-1"
                   defaultValue={user.email}
                   ref={emailRef}
                 />
-                <div className="font-semibold">password:</div>
+                <label htmlFor="edit-password" className="font-semibold">
+                  password:
+                </label>
                 <input
-                  id="password"
+                  id="edit-password"
                   type="text"
                   className="col-span-4 border border-gray-300 rounded-md p-1"
                   defaultValue=""
