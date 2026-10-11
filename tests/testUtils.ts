@@ -89,6 +89,21 @@ export async function basicInit(page: Page) {
     await route.fulfill({ json: { user, token: 'ghijkl' } });
   });
 
+  await page.route(/\/api\/user(\?.*)?$/, async (route) => {
+    expect(route.request().method()).toBe('GET');
+    const params = new URL(route.request().url()).searchParams;
+    const pageNum = Number(params.get('page') ?? 0);
+    const limit = Number(params.get('limit') ?? 10);
+    const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const nameFilter = new RegExp('^' + (params.get('name') ?? '*').split('*').map(escape).join('.*') + '$', 'i');
+
+    const matching = Object.values(validUsers)
+      .filter((u) => nameFilter.test(u.name!))
+      .map(({ password, ...u }) => u);
+    const users = matching.slice(pageNum * limit, (pageNum + 1) * limit);
+    await route.fulfill({ json: { users, more: matching.length > (pageNum + 1) * limit } });
+  });
+
   // A standard menu
   await page.route('*/**/api/order/menu', async (route) => {
     const menuRes = [

@@ -3,6 +3,7 @@ import View from './view';
 import { useNavigate } from 'react-router-dom';
 import NotFound from './notFound';
 import Button from '../components/button';
+import UserList from '../components/userList';
 import { pizzaService } from '../service/service';
 import { Franchise, FranchiseList, Role, Store, User } from '../service/pizzaService';
 import { TrashIcon } from '../icons';
@@ -123,6 +124,7 @@ export default function AdminDashboard(props: Props) {
         <div>
           <Button className="w-36 text-xs sm:text-sm sm:w-64" title="Add Franchise" onPress={createFranchise} />
         </div>
+        <UserList />
       </View>
     );
   }
