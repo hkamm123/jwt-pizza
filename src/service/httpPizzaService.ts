@@ -1,10 +1,27 @@
-import { PizzaService, Franchise, FranchiseList, Store, OrderHistory, User, UserList, Menu, Order, Endpoints, OrderResponse, JWTPayload } from './pizzaService';
+import {
+  PizzaService,
+  Franchise,
+  FranchiseList,
+  Store,
+  OrderHistory,
+  User,
+  UserList,
+  Menu,
+  Order,
+  Endpoints,
+  OrderResponse,
+  JWTPayload,
+} from './pizzaService';
 
 const pizzaServiceUrl = import.meta.env.VITE_PIZZA_SERVICE_URL;
 const pizzaFactoryUrl = import.meta.env.VITE_PIZZA_FACTORY_URL;
 
 class HttpPizzaService implements PizzaService {
-  async callEndpoint(path: string, method: string = 'GET', body?: any): Promise<any> {
+  async callEndpoint(
+    path: string,
+    method: string = 'GET',
+    body?: any,
+  ): Promise<any> {
     return new Promise(async (resolve, reject) => {
       try {
         const options: any = {
@@ -42,13 +59,20 @@ class HttpPizzaService implements PizzaService {
   }
 
   async login(email: string, password: string): Promise<User> {
-    const { user, token } = await this.callEndpoint('/api/auth', 'PUT', { email, password });
+    const { user, token } = await this.callEndpoint('/api/auth', 'PUT', {
+      email,
+      password,
+    });
     localStorage.setItem('token', token);
     return Promise.resolve(user);
   }
 
   async register(name: string, email: string, password: string): Promise<User> {
-    const { user, token } = await this.callEndpoint('/api/auth', 'POST', { name, email, password });
+    const { user, token } = await this.callEndpoint('/api/auth', 'POST', {
+      name,
+      email,
+      password,
+    });
     localStorage.setItem('token', token);
     return Promise.resolve(user);
   }
@@ -71,13 +95,23 @@ class HttpPizzaService implements PizzaService {
   }
 
   async updateUser(updatedUser: User): Promise<User> {
-    const { user, token } = await this.callEndpoint(`/api/user/${updatedUser.id}`, 'PUT', updatedUser);
+    const { user, token } = await this.callEndpoint(
+      `/api/user/${updatedUser.id}`,
+      'PUT',
+      updatedUser,
+    );
     localStorage.setItem('token', token);
     return Promise.resolve(user);
   }
 
-  async listUsers(page: number = 0, limit: number = 10, nameFilter: string = '*'): Promise<UserList> {
-    return this.callEndpoint(`/api/user?page=${page}&limit=${limit}&name=${nameFilter}`);
+  async listUsers(
+    page: number = 0,
+    limit: number = 10,
+    nameFilter: string = '*',
+  ): Promise<UserList> {
+    return this.callEndpoint(
+      `/api/user?page=${page}&limit=${limit}&name=${nameFilter}`,
+    );
   }
 
   async getMenu(): Promise<Menu> {
@@ -93,7 +127,9 @@ class HttpPizzaService implements PizzaService {
   }
 
   async verifyOrder(jwt: string): Promise<JWTPayload> {
-    return this.callEndpoint(pizzaFactoryUrl + '/api/order/verify', 'POST', { jwt });
+    return this.callEndpoint(pizzaFactoryUrl + '/api/order/verify', 'POST', {
+      jwt,
+    });
   }
 
   async getFranchise(user: User): Promise<Franchise[]> {
@@ -104,8 +140,14 @@ class HttpPizzaService implements PizzaService {
     return this.callEndpoint('/api/franchise', 'POST', franchise);
   }
 
-  async getFranchises(page: number = 0, limit: number = 10, nameFilter: string = '*'): Promise<FranchiseList> {
-    return this.callEndpoint(`/api/franchise?page=${page}&limit=${limit}&name=${nameFilter}`);
+  async getFranchises(
+    page: number = 0,
+    limit: number = 10,
+    nameFilter: string = '*',
+  ): Promise<FranchiseList> {
+    return this.callEndpoint(
+      `/api/franchise?page=${page}&limit=${limit}&name=${nameFilter}`,
+    );
   }
 
   async closeFranchise(franchise: Franchise): Promise<void> {
@@ -113,11 +155,18 @@ class HttpPizzaService implements PizzaService {
   }
 
   async createStore(franchise: Franchise, store: Store): Promise<Store> {
-    return this.callEndpoint(`/api/franchise/${franchise.id}/store`, 'POST', store);
+    return this.callEndpoint(
+      `/api/franchise/${franchise.id}/store`,
+      'POST',
+      store,
+    );
   }
 
   async closeStore(franchise: Franchise, store: Store): Promise<null> {
-    return this.callEndpoint(`/api/franchise/${franchise.id}/store/${store.id}`, 'DELETE');
+    return this.callEndpoint(
+      `/api/franchise/${franchise.id}/store/${store.id}`,
+      'DELETE',
+    );
   }
 
   async docs(docType: string): Promise<Endpoints> {
