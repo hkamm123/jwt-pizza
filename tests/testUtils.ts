@@ -74,12 +74,29 @@ export async function basicInit(page: Page, extraUsers: User[] = []) {
     await route.fulfill({ json: loggedInUser });
   });
 
-  // Update a user. The frontend leaves the password out when it isn't
-  // changed, so only overwrite the fields that were actually sent.
+  // Update (PUT) or delete (DELETE) a user
   await page.route(/\/api\/user\/(\d+)$/, async (route) => {
-    expect(route.request().method()).toBe('PUT');
+    const method = route.request().method();
     const userId = new URL(route.request().url()).pathname.split('/').pop();
     const user = Object.values(validUsers).find((u) => u.id === userId);
+
+    if (method === 'DELETE') {
+      if (!Role.isRole(loggedInUser ?? null, Role.Admin)) {
+        await route.fulfill({ status: 403, json: { message: 'unauthorized' } });
+        return;
+      }
+      if (!user) {
+        await route.fulfill({ status: 404, json: { message: 'unknown user' } });
+        return;
+      }
+      delete validUsers[user.email!];
+      await route.fulfill({ json: { message: 'User deleted successfully' } });
+      return;
+    }
+
+    // The frontend leaves the password out when it isn't changed,
+    // so only overwrite the fields that were actually sent.
+    expect(method).toBe('PUT');
     if (!user || user.id !== loggedInUser?.id) {
       await route.fulfill({ status: 403, json: { message: 'unauthorized' } });
       return;
@@ -107,6 +124,7 @@ export async function basicInit(page: Page, extraUsers: User[] = []) {
     const users = matching.slice(pageNum * limit, (pageNum + 1) * limit);
     await route.fulfill({ json: { users, more: matching.length > (pageNum + 1) * limit } });
   });
+
 
   // A standard menu
   await page.route('*/**/api/order/menu', async (route) => {

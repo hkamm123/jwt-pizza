@@ -94,6 +94,26 @@ test('non-admin does not see the user list', async ({ page }) => {
   await expect(page.getByRole('table', { name: 'Users' })).not.toBeVisible();
 });
 
+test('admin can delete user', async ({ page }) => {
+  await basicInit(page);
+  const userTable = await openUserList(page);
+  const deleteButton = userTable
+    .getByRole('row', { name: /d@jwt\.com/ })
+    .getByRole('button', { name: 'Delete' });
+
+  await expect(deleteButton).toBeVisible();
+  await expect(deleteButton).toBeEnabled();
+  await deleteButton.click();
+  await expect(userTable).toBeVisible();
+  const deletedRow = userTable.getByRole('row', { name: /d@jwt\.com/ });
+  await expect(deletedRow).not.toBeVisible();
+
+  await page.getByRole('link', { name: 'Logout' }).click();
+  await openUserList(page);
+  await expect(userTable).toContainText('Frank Franchisee');
+  await expect(deletedRow).not.toBeVisible();
+});
+
 // 3 standard users + 12 extra = 15, so 10 on the first page and 5 on the second
 function twoPagesOfUsers(): User[] {
   return Array.from({ length: 12 }, (_, i) => ({
