@@ -80,6 +80,20 @@ test('pagination shows the current page number', async ({ page }) => {
   await expect(pager).toContainText('Page 1');
 });
 
+test('non-admin does not see the user list', async ({ page }) => {
+  await basicInit(page);
+  await login(page, 'd@jwt.com');
+
+  await page.getByRole('link', { name: 'KC' }).click();
+  await expect(page.getByText('Your pizza kitchen')).toBeVisible();
+  await expect(page.getByRole('table', { name: 'Users' })).not.toBeVisible();
+
+  await page.goto('/admin-dashboard');
+  await expect(page.getByText('Oops')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Logout' })).toBeVisible();
+  await expect(page.getByRole('table', { name: 'Users' })).not.toBeVisible();
+});
+
 // 3 standard users + 12 extra = 15, so 10 on the first page and 5 on the second
 function twoPagesOfUsers(): User[] {
   return Array.from({ length: 12 }, (_, i) => ({
