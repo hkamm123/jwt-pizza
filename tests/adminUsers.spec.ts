@@ -103,7 +103,7 @@ test('admin can delete user', async ({ page }) => {
 
   await expect(deleteButton).toBeVisible();
   await expect(deleteButton).toBeEnabled();
-  await deleteButton.click();
+  await deleteUser(page, /d@jwt\.com/);
   await expect(userTable).toBeVisible();
   const deletedRow = userTable.getByRole('row', { name: /d@jwt\.com/ });
   await expect(deletedRow).not.toBeVisible();
@@ -114,15 +114,87 @@ test('admin can delete user', async ({ page }) => {
   await expect(deletedRow).not.toBeVisible();
 });
 
+test('deleting the last user on a page goes back a page', async ({ page }) => {
+  // 3 standard users + 8 extra = 11, so Diner 8 is alone on the second page
+  await basicInit(page, extraDiners(8));
+  const userTable = await openUserList(page);
+  const rows = userTable.locator('tbody tr');
+  const pager = userTable.getByRole('cell').filter({ has: page.getByRole('button', { name: '»' }) });
+
+  await userTable.getByRole('button', { name: '»' }).click();
+  await expect(rows).toHaveCount(1);
+  await deleteUser(page, /diner8@jwt\.com/);
+
+  await expect(pager).toContainText('Page 1');
+  await expect(rows).toHaveCount(10);
+  await expect(userTable.getByRole('button', { name: '»' })).toBeDisabled();
+});
+
+test('a failed delete shows an error and keeps the user', async ({ page }) => {
+  await basicInit(page);
+  // Registered after basicInit, so Playwright tries it before the standard mock
+  await page.route(/\/api\/user\/3$/, (route) =>
+    route.fulfill({ status: 500, json: { message: 'unable to delete user' } }),
+  );
+  const userTable = await openUserList(page);
+
+  await deleteUser(page, /d@jwt\.com/);
+
+  await expect(page.getByRole('alert')).toContainText('unable to delete user');
+  await expect(userTable).toContainText('Kai Chen');
+});
+
+test('cancelling the delete dialog keeps the user', async ({ page }) => {
+  await basicInit(page);
+  const deleteRequests: string[] = [];
+  page.on('request', (req) => {
+    if (req.method() === 'DELETE' && req.url().includes('/api/user/')) {
+      deleteRequests.push(req.url());
+    }
+  });
+  const userTable = await openUserList(page);
+
+  await userTable.getByRole('row', { name: /d@jwt\.com/ }).getByRole('button', { name: 'Delete' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Kai Chen');
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+
+  await expect(dialog).toBeHidden();
+  await expect(userTable).toContainText('Kai Chen');
+  expect(deleteRequests).toEqual([]);
+});
+
+test('admin cannot delete their own account', async ({ page }) => {
+  await basicInit(page);
+  const userTable = await openUserList(page);
+  const deleteButtonFor = (email: RegExp) =>
+    userTable.getByRole('row', { name: email }).getByRole('button', { name: 'Delete' });
+
+  // Check another row first so we know the list has loaded
+  await expect(deleteButtonFor(/d@jwt\.com/)).toBeVisible();
+  await expect(deleteButtonFor(/a@jwt\.com/)).toHaveCount(0);
+});
+
 // 3 standard users + 12 extra = 15, so 10 on the first page and 5 on the second
 function twoPagesOfUsers(): User[] {
-  return Array.from({ length: 12 }, (_, i) => ({
+  return extraDiners(12);
+}
+
+function extraDiners(count: number): User[] {
+  return Array.from({ length: count }, (_, i) => ({
     id: String(100 + i),
     name: `Diner ${i + 1}`,
     email: `diner${i + 1}@jwt.com`,
     password: 'a',
     roles: [{ role: Role.Diner }],
   }));
+}
+
+// Click the Delete button on the row matching email, then confirm in the dialog
+async function deleteUser(page: Page, email: RegExp) {
+  const userTable = page.getByRole('table', { name: 'Users' });
+  await userTable.getByRole('row', { name: email }).getByRole('button', { name: 'Delete' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
 }
 
 async function filterUsers(userTable: Locator, name: string) {

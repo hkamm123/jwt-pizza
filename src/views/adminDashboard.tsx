@@ -124,7 +124,7 @@ export default function AdminDashboard(props: Props) {
         <div>
           <Button className="w-36 text-xs sm:text-sm sm:w-64" title="Add Franchise" onPress={createFranchise} />
         </div>
-        <UserList />
+        <UserList user={props.user} />
       </View>
     );
   }
