@@ -86,6 +86,7 @@ export default function UserList() {
                 >
                   «
                 </button>
+                <span className="mx-2 text-gray-800">Page {page + 1}</span>
                 <button
                   className="w-12 p-1 text-sm font-semibold rounded-lg border border-transparent bg-white text-grey border-grey m-1 hover:bg-orange-200 disabled:bg-neutral-300"
                   onClick={() => setPage(page + 1)}

@@ -61,6 +61,25 @@ test('filtering from a later page starts back at the first page', async ({ page 
   await expect(userTable.getByRole('button', { name: '»' })).toBeDisabled();
 });
 
+test('pagination shows the current page number', async ({ page }) => {
+  await basicInit(page, twoPagesOfUsers());
+  const userTable = await openUserList(page);
+  const next = userTable.getByRole('button', { name: '»' });
+  const pager = userTable.getByRole('cell').filter({ has: page.getByRole('button', { name: '»' }) });
+
+  await expect(pager).toContainText('Page 1');
+
+  await next.click();
+  await expect(pager).toContainText('Page 2');
+
+  await userTable.getByRole('button', { name: '«' }).click();
+  await expect(pager).toContainText('Page 1');
+
+  await next.click();
+  await filterUsers(userTable, 'Kai');
+  await expect(pager).toContainText('Page 1');
+});
+
 // 3 standard users + 12 extra = 15, so 10 on the first page and 5 on the second
 function twoPagesOfUsers(): User[] {
   return Array.from({ length: 12 }, (_, i) => ({
