@@ -2,7 +2,8 @@ import { Page } from '@playwright/test';
 import { expect } from 'playwright-test-coverage';
 import { Franchise, Role, Store, User } from '../src/service/pizzaService';
 
-export async function basicInit(page: Page) {
+// extraUsers are added to the standard users, e.g. to fill more than one page of the user list.
+export async function basicInit(page: Page, extraUsers: User[] = []) {
   let loggedInUser: User | undefined;
   const validUsers: Record<string, User> = {
     'd@jwt.com': {
@@ -27,6 +28,9 @@ export async function basicInit(page: Page) {
       roles: [{ role: Role.Franchisee, objectId: '2' }],
     },
   };
+  for (const user of extraUsers) {
+    validUsers[user.email!] = user;
+  }
 
   // Login (PUT), register (POST), or logout (DELETE)
   await page.route('*/**/api/auth', async (route) => {

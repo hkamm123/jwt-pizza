@@ -7,12 +7,13 @@ export default function UserList() {
     users: [],
     more: false,
   });
+  const [page, setPage] = React.useState(0);
 
   React.useEffect(() => {
     (async () => {
-      setUserList(await pizzaService.listUsers(0, 10, '*'));
+      setUserList(await pizzaService.listUsers(page, 10, '*'));
     })();
-  }, []);
+  }, [page]);
 
   return (
     <div className="text-start py-8 px-4 sm:px-6 lg:px-8">
@@ -52,6 +53,26 @@ export default function UserList() {
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr>
+              <td colSpan={3} className="text-end text-sm font-medium">
+                <button
+                  className="w-12 p-1 text-sm font-semibold rounded-lg border border-transparent bg-white text-grey border-grey m-1 hover:bg-orange-200 disabled:bg-neutral-300"
+                  onClick={() => setPage(page - 1)}
+                  disabled={page <= 0}
+                >
+                  «
+                </button>
+                <button
+                  className="w-12 p-1 text-sm font-semibold rounded-lg border border-transparent bg-white text-grey border-grey m-1 hover:bg-orange-200 disabled:bg-neutral-300"
+                  onClick={() => setPage(page + 1)}
+                  disabled={!userList.more}
+                >
+                  »
+                </button>
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
