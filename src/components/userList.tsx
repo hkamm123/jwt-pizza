@@ -8,12 +8,19 @@ export default function UserList() {
     more: false,
   });
   const [page, setPage] = React.useState(0);
+  const [nameFilter, setNameFilter] = React.useState('*');
+  const filterUserRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     (async () => {
-      setUserList(await pizzaService.listUsers(page, 10, '*'));
+      setUserList(await pizzaService.listUsers(page, 10, nameFilter));
     })();
-  }, [page]);
+  }, [page, nameFilter]);
+
+  function filterUsers() {
+    setPage(0);
+    setNameFilter(`*${filterUserRef.current?.value}*`);
+  }
 
   return (
     <div className="text-start py-8 px-4 sm:px-6 lg:px-8">
@@ -55,7 +62,23 @@ export default function UserList() {
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={3} className="text-end text-sm font-medium">
+              <td className="px-1 py-1">
+                <input
+                  type="text"
+                  ref={filterUserRef}
+                  name="filterUser"
+                  placeholder="Filter users"
+                  className="px-2 py-1 text-sm border border-gray-300 rounded-lg"
+                />
+                <button
+                  type="submit"
+                  className="ml-2 px-2 py-1 text-sm font-semibold rounded-lg border border-orange-400 text-orange-400 hover:border-orange-800 hover:text-orange-800"
+                  onClick={filterUsers}
+                >
+                  Apply Filter
+                </button>
+              </td>
+              <td colSpan={2} className="text-end text-sm font-medium">
                 <button
                   className="w-12 p-1 text-sm font-semibold rounded-lg border border-transparent bg-white text-grey border-grey m-1 hover:bg-orange-200 disabled:bg-neutral-300"
                   onClick={() => setPage(page - 1)}
