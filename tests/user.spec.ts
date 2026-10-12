@@ -33,6 +33,39 @@ test('update user password', async ({ page }) => {
   await expect(page.getByRole('main')).toContainText(diner.name);
 });
 
+test('franchisee can update their profile and keep their franchise role', async ({ page }) => {
+  await basicInit(page);
+  await login(page, 'f@jwt.com');
+  await openDashboard(page, 'FF');
+  await expect(page.getByRole('main')).toContainText('Franchisee on 2');
+
+  await editUser(page, { name: 'Frank Franchisex' });
+  await expect(page.getByRole('main')).toContainText('Frank Franchisex');
+  await expect(page.getByRole('main')).toContainText('Franchisee on 2');
+
+  await reloginAndOpenDashboard(page, 'f@jwt.com', 'a', 'FF');
+  await expect(page.getByRole('main')).toContainText('Frank Franchisex');
+  await expect(page.getByRole('main')).toContainText('Franchisee on 2');
+});
+
+test('admin can update their profile and keep admin access', async ({ page }) => {
+  await basicInit(page);
+  await login(page, 'a@jwt.com');
+  await openDashboard(page, 'AA');
+  await expect(page.getByRole('main')).toContainText(/role:\s*admin/);
+
+  await editUser(page, { name: 'Admin Adminsonx', email: 'newadmin@jwt.com' });
+  await expect(page.getByRole('main')).toContainText('Admin Adminsonx');
+  await expect(page.getByRole('main')).toContainText('newadmin@jwt.com');
+  await expect(page.getByRole('main')).toContainText(/role:\s*admin/);
+  await expect(page.getByRole('link', { name: 'Admin' })).toBeVisible();
+
+  await reloginAndOpenDashboard(page, 'newadmin@jwt.com', 'a', 'AA');
+  await expect(page.getByRole('main')).toContainText('Admin Adminsonx');
+  await expect(page.getByRole('main')).toContainText(/role:\s*admin/);
+  await expect(page.getByRole('link', { name: 'Admin' })).toBeVisible();
+});
+
 async function registerAndOpenDashboard(page: Page) {
   await basicInit(page);
 
@@ -47,8 +80,8 @@ async function registerAndOpenDashboard(page: Page) {
 }
 
 // The header link shows the user's initials, which none of the tests change.
-async function openDashboard(page: Page) {
-  await page.getByRole('link', { name: 'pd' }).click();
+async function openDashboard(page: Page, initials = 'pd') {
+  await page.getByRole('link', { name: initials }).click();
 }
 
 // Only the fields passed in are changed; the rest keep their current values.
@@ -65,8 +98,8 @@ async function editUser(page: Page, changes: { name?: string; email?: string; pa
   await page.waitForSelector('[role="dialog"].hidden', { state: 'attached' });
 }
 
-async function reloginAndOpenDashboard(page: Page, email: string, password: string) {
+async function reloginAndOpenDashboard(page: Page, email: string, password: string, initials = 'pd') {
   await page.getByRole('link', { name: 'Logout' }).click();
   await login(page, email, password);
-  await openDashboard(page);
+  await openDashboard(page, initials);
 }
